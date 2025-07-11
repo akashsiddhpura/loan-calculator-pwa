@@ -1,87 +1,245 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Loan & Saving Calculator</title>
+  <title>Smart Loan & EMI Planner</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#007bff">
+  <meta name="theme-color" content="#6a0dad">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial; padding: 20px; max-width: 600px; margin: auto; background: #f4f4f4; }
-    input, button { padding: 8px; margin: 5px 0; width: 100%; }
-    .result { background: #fff; padding: 15px; margin-top: 20px; border-radius: 8px; }
-    h2 { color: #333; }
+    :root {
+      --primary-color: #6a0dad;
+      --light-bg: #f9f9f9;
+      --dark-text: #333;
+      --card-bg: #fff;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--light-bg);
+      color: var(--dark-text);
+    }
+
+    header {
+      background: var(--primary-color);
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.4rem;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    input, select {
+      padding: 10px;
+      margin-top: 5px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      width: 100%;
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .toggle-section {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .toggle-section label {
+      margin-top: 0;
+    }
+
+    .results, .table-wrapper {
+      margin-top: 30px;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .results h3 {
+      margin-top: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    .mode-toggle {
+      float: right;
+      font-size: 0.9rem;
+      margin-top: -2.5rem;
+      margin-right: 10px;
+    }
+
+    .mode-toggle input {
+      margin-left: 6px;
+    }
   </style>
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js');
+    function calculateLoan() {
+      const P = parseFloat(document.getElementById("loanAmount").value);
+      const R = parseFloat(document.getElementById("interestRate").value) / 12 / 100;
+      const N = parseFloat(document.getElementById("loanTenure").value) * 12;
+      const toggleType = document.getElementById("extraType").value;
+      let extra = parseFloat(document.getElementById("extraAmount").value);
+      const emiCount = parseInt(document.getElementById("extraCount").value) || 1;
+
+      if (!P || !R || !N || isNaN(extra)) {
+        alert("Please fill all fields correctly.");
+        return;
+      }
+
+      const EMI = P * R * Math.pow(1 + R, N) / (Math.pow(1 + R, N) - 1);
+      let balance = P, totalInterest = 0, months = 0;
+      let schedule = [];
+
+      while (balance > 0.1) {
+        const interest = balance * R;
+        const principal = EMI - interest;
+        balance -= principal;
+        totalInterest += interest;
+        months++;
+
+        let prepay = 0;
+        if (months % 12 === 0 && extra > 0) {
+          prepay = (toggleType === 'emi') ? EMI * emiCount : extra;
+          balance -= prepay;
+        }
+
+        schedule.push({
+          month: months,
+          emi: EMI.toFixed(2),
+          interest: interest.toFixed(2),
+          principal: principal.toFixed(2),
+          prepay: prepay.toFixed(2),
+          balance: balance.toFixed(2)
+        });
+
+        if (balance < 0) balance = 0;
+      }
+
+      const resultHTML = `
+        <h3>Loan Summary</h3>
+        <p><strong>Monthly EMI:</strong> ₹${EMI.toFixed(2)}</p>
+        <p><strong>Tenure Reduced To:</strong> ${(months / 12).toFixed(2)} years</p>
+        <p><strong>Total Interest Paid:</strong> ₹${totalInterest.toFixed(2)}</p>
+        <p><strong>Interest Saved:</strong> ₹${((EMI * N - P) - totalInterest).toFixed(2)}</p>
+      `;
+
+      const tableRows = schedule.map(row => `
+        <tr>
+          <td>${row.month}</td>
+          <td>₹${row.emi}</td>
+          <td>₹${row.interest}</td>
+          <td>₹${row.principal}</td>
+          <td>₹${row.prepay}</td>
+          <td>₹${row.balance}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById("results").innerHTML = resultHTML;
+      document.getElementById("schedule").innerHTML = `
+        <h3>Amortization Schedule</h3>
+        <div class="table-wrapper">
+          <table>
+            <tr>
+              <th>Month</th>
+              <th>EMI</th>
+              <th>Interest</th>
+              <th>Principal</th>
+              <th>Extra Payment</th>
+              <th>Balance</th>
+            </tr>
+            ${tableRows}
+          </table>
+        </div>
+      `;
+    }
+
+    function toggleMode(e) {
+      if (e.checked) {
+        document.body.style.background = '#ffffff';
+      } else {
+        document.body.style.background = '#f9f9f9';
+      }
     }
   </script>
 </head>
 <body>
+  <header>
+    Smart Loan & EMI Planner
+    <div class="mode-toggle">
+      Light Background: <input type="checkbox" onchange="toggleMode(this)" checked>
+    </div>
+  </header>
 
-<h2>Loan & Saving Calculator</h2>
+  <div class="container">
+    <label>Loan Amount (₹):</label>
+    <input type="number" id="loanAmount" placeholder="e.g. 3500000">
 
-<label>Loan Amount (₹):</label>
-<input type="number" id="loanAmount" placeholder="e.g. 3500000">
+    <label>Annual Interest Rate (%):</label>
+    <input type="number" id="interestRate" placeholder="e.g. 8">
 
-<label>Annual Interest Rate (%):</label>
-<input type="number" id="interestRate" placeholder="e.g. 8">
+    <label>Loan Tenure (Years):</label>
+    <input type="number" id="loanTenure" placeholder="e.g. 20">
 
-<label>Loan Tenure (Years):</label>
-<input type="number" id="loanTenure" placeholder="e.g. 20">
+    <label>Extra Payment Type:</label>
+    <select id="extraType">
+      <option value="emi">EMI Count</option>
+      <option value="lump">Lump Sum (₹)</option>
+    </select>
 
-<label>Extra EMI Payment (once per year):</label>
-<input type="number" id="extraPayment" placeholder="e.g. 100000">
+    <div class="toggle-section">
+      <label id="extraLabel">EMI Count per Year:</label>
+      <input type="number" id="extraCount" placeholder="e.g. 1">
+    </div>
 
-<button onclick="calculateLoan()">Calculate</button>
+    <label>Extra Amount (₹):</label>
+    <input type="number" id="extraAmount" placeholder="e.g. 100000">
 
-<div class="result" id="result" style="display:none;"></div>
+    <button onclick="calculateLoan()">Calculate</button>
 
-<script>
-  function calculateLoan() {
-    const P = parseFloat(document.getElementById("loanAmount").value);
-    const R = parseFloat(document.getElementById("interestRate").value) / 12 / 100;
-    const N = parseFloat(document.getElementById("loanTenure").value) * 12;
-    const extra = parseFloat(document.getElementById("extraPayment").value);
-
-    if (!P || !R || !N) {
-      alert("Please fill all fields correctly.");
-      return;
-    }
-
-    const EMI = P * R * Math.pow(1 + R, N) / (Math.pow(1 + R, N) - 1);
-    let balance = P;
-    let totalInterest = 0;
-    let months = 0;
-
-    while (balance > 0.1) {
-      const interest = balance * R;
-      const principal = EMI - interest;
-      balance -= principal;
-      totalInterest += interest;
-      months++;
-      if (months % 12 === 0 && extra > 0) {
-        balance -= extra;
-      }
-      if (balance < 0) balance = 0;
-    }
-
-    const savings = (EMI * N) - totalInterest;
-    const yearsSaved = (N - months) / 12;
-
-    document.getElementById("result").innerHTML = `
-      <h3>Results</h3>
-      <p><strong>Monthly EMI:</strong> ₹${EMI.toFixed(2)}</p>
-      <p><strong>Original Tenure:</strong> ${N / 12} years</p>
-      <p><strong>Reduced Tenure:</strong> ${(months / 12).toFixed(2)} years</p>
-      <p><strong>Interest Without Prepayment:</strong> ₹${(EMI * N - P).toFixed(2)}</p>
-      <p><strong>Interest With Prepayment:</strong> ₹${totalInterest.toFixed(2)}</p>
-      <p><strong>Total Interest Saved:</strong> ₹${((EMI * N - P) - totalInterest).toFixed(2)}</p>
-      <p><strong>Tenure Reduced By:</strong> ${yearsSaved.toFixed(1)} years</p>
-    `;
-    document.getElementById("result").style.display = "block";
-  }
-</script>
-
+    <div id="results" class="results"></div>
+    <div id="schedule"></div>
+  </div>
 </body>
 </html>

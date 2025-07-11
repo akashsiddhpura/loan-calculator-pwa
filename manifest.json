@@ -1,10 +1,11 @@
+
 {
-  "name": "Loan & EMI Calculator",
+  "name": "Smart Loan & EMI Planner",
   "short_name": "LoanCalc",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#007bff",
+  "theme_color": "#6a0dad",
   "icons": [
     {
       "src": "icon-192.png",
