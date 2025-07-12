@@ -1,11 +1,11 @@
 
 {
-  "name": "Smart Loan & EMI Planner",
+  "name": "Loan Planner & Savings Visualizer",
   "short_name": "LoanCalc",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#6a0dad",
+  "background_color": "#eef1f5",
+  "theme_color": "#6A5ACD",
   "icons": [
     {
       "src": "icon-192.png",

@@ -2,244 +2,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Smart Loan & EMI Planner</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#6a0dad">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loan Planner & Savings Visualizer</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6A5ACD" />
   <style>
-    :root {
-      --primary-color: #6a0dad;
-      --light-bg: #f9f9f9;
-      --dark-text: #333;
-      --card-bg: #fff;
-    }
-
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: var(--light-bg);
-      color: var(--dark-text);
+      background: linear-gradient(145deg, #eef1f5, #d4dbe6);
+      color: #222;
+      padding-bottom: 100px;
     }
-
     header {
-      background: var(--primary-color);
-      color: #fff;
-      padding: 1rem;
       text-align: center;
-      font-size: 1.4rem;
+      background: rgba(106, 90, 205, 0.8);
+      color: white;
+      padding: 1.5rem;
+      backdrop-filter: blur(10px);
+      font-size: 1.5rem;
     }
-
     .container {
+      max-width: 960px;
+      margin: 0 auto;
       padding: 20px;
-      max-width: 800px;
-      margin: auto;
     }
-
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      margin-top: 20px;
+    }
     label {
+      font-weight: 600;
       display: block;
       margin-top: 10px;
-      font-weight: 600;
     }
-
     input, select {
-      padding: 10px;
-      margin-top: 5px;
       width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 10px;
       border: 1px solid #ccc;
-      border-radius: 6px;
       font-size: 1rem;
     }
-
     button {
       margin-top: 20px;
-      padding: 12px;
       width: 100%;
-      background: var(--primary-color);
-      color: #fff;
+      padding: 12px;
+      background: #6A5ACD;
       border: none;
-      border-radius: 6px;
+      color: white;
       font-size: 1.1rem;
+      border-radius: 10px;
       cursor: pointer;
     }
-
-    .toggle-section {
-      margin-top: 10px;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .toggle-section label {
-      margin-top: 0;
-    }
-
-    .results, .table-wrapper {
-      margin-top: 30px;
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    .results h3 {
-      margin-top: 0;
-    }
-
+    .charts { margin-top: 30px; }
     table {
       width: 100%;
+      margin-top: 20px;
       border-collapse: collapse;
-      margin-top: 10px;
     }
-
     th, td {
       padding: 10px;
-      border: 1px solid #ddd;
       text-align: center;
+      border: 1px solid #ddd;
     }
-
-    th {
-      background: #f0f0f0;
+    th { background: #f0f0f0; }
+    .comparison {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-
-    .mode-toggle {
-      float: right;
-      font-size: 0.9rem;
-      margin-top: -2.5rem;
-      margin-right: 10px;
-    }
-
-    .mode-toggle input {
-      margin-left: 6px;
+    @media (min-width: 768px) {
+      .comparison {
+        flex-direction: row;
+        justify-content: space-between;
+      }
     }
   </style>
+</head>
+<body>
+  <header>Loan Planner & Savings Visualizer</header>
+  <div class="container">
+    <div class="glass">
+      <label>Loan Amount (₹):</label>
+      <input type="number" id="loanAmount" value="3000000"/>
+      <label>Annual Interest Rate (%):</label>
+      <input type="number" id="interestRate" value="8"/>
+      <label>Loan Tenure (Years):</label>
+      <input type="number" id="loanTenure" value="20"/>
+      <label>Extra Payment Type:</label>
+      <select id="extraType">
+        <option value="emi">EMI Count</option>
+        <option value="lump">Lump Sum (₹)</option>
+      </select>
+      <label>Extra Amount or EMI Count:</label>
+      <input type="number" id="extraAmount" value="2"/>
+      <button onclick="calculateLoan()">Calculate</button>
+    </div>
+
+    <div id="summary" class="glass"></div>
+    <div class="glass charts">
+      <canvas id="chartCanvas" height="120"></canvas>
+    </div>
+    <div class="glass">
+      <h3>Year-wise Loan Data</h3>
+      <div id="yearTable"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     function calculateLoan() {
       const P = parseFloat(document.getElementById("loanAmount").value);
       const R = parseFloat(document.getElementById("interestRate").value) / 12 / 100;
       const N = parseFloat(document.getElementById("loanTenure").value) * 12;
-      const toggleType = document.getElementById("extraType").value;
-      let extra = parseFloat(document.getElementById("extraAmount").value);
-      const emiCount = parseInt(document.getElementById("extraCount").value) || 1;
-
-      if (!P || !R || !N || isNaN(extra)) {
-        alert("Please fill all fields correctly.");
-        return;
-      }
-
+      const extraType = document.getElementById("extraType").value;
+      let extraValue = parseFloat(document.getElementById("extraAmount").value);
       const EMI = P * R * Math.pow(1 + R, N) / (Math.pow(1 + R, N) - 1);
       let balance = P, totalInterest = 0, months = 0;
-      let schedule = [];
-
-      while (balance > 0.1) {
+      let yearSummary = {};
+      while (balance > 0.1 && months < N) {
         const interest = balance * R;
         const principal = EMI - interest;
         balance -= principal;
         totalInterest += interest;
         months++;
-
-        let prepay = 0;
-        if (months % 12 === 0 && extra > 0) {
-          prepay = (toggleType === 'emi') ? EMI * emiCount : extra;
-          balance -= prepay;
+        let extra = 0;
+        if (months % 12 === 0) {
+          extra = extraType === "emi" ? (EMI * extraValue) : extraValue;
+          balance -= extra;
         }
-
-        schedule.push({
-          month: months,
-          emi: EMI.toFixed(2),
-          interest: interest.toFixed(2),
-          principal: principal.toFixed(2),
-          prepay: prepay.toFixed(2),
-          balance: balance.toFixed(2)
-        });
-
-        if (balance < 0) balance = 0;
+        const year = Math.ceil(months / 12);
+        if (!yearSummary[year]) {
+          yearSummary[year] = { totalEMI: 0, totalInterest: 0, totalPrincipal: 0, balance: 0 };
+        }
+        yearSummary[year].totalEMI += EMI;
+        yearSummary[year].totalInterest += interest;
+        yearSummary[year].totalPrincipal += principal;
+        yearSummary[year].balance = balance;
       }
-
-      const resultHTML = `
-        <h3>Loan Summary</h3>
-        <p><strong>Monthly EMI:</strong> ₹${EMI.toFixed(2)}</p>
-        <p><strong>Tenure Reduced To:</strong> ${(months / 12).toFixed(2)} years</p>
-        <p><strong>Total Interest Paid:</strong> ₹${totalInterest.toFixed(2)}</p>
-        <p><strong>Interest Saved:</strong> ₹${((EMI * N - P) - totalInterest).toFixed(2)}</p>
-      `;
-
-      const tableRows = schedule.map(row => `
+      const actualTotalPayable = EMI * N;
+      const saved = actualTotalPayable - (P + totalInterest);
+      const newYears = (months / 12).toFixed(2);
+      document.getElementById("summary").innerHTML = `
+        <h3>Summary</h3>
+        <div class="comparison">
+          <div><strong>Original Tenure:</strong> ${N / 12} years</div>
+          <div><strong>New Tenure:</strong> ${newYears} years</div>
+          <div><strong>Total Interest Paid:</strong> ₹${totalInterest.toFixed(2)}</div>
+          <div><strong>Interest Saved:</strong> ₹${saved.toFixed(2)}</div>
+        </div>`;
+      const yearRows = Object.entries(yearSummary).map(([y, v]) => `
         <tr>
-          <td>${row.month}</td>
-          <td>₹${row.emi}</td>
-          <td>₹${row.interest}</td>
-          <td>₹${row.principal}</td>
-          <td>₹${row.prepay}</td>
-          <td>₹${row.balance}</td>
-        </tr>
-      `).join('');
-
-      document.getElementById("results").innerHTML = resultHTML;
-      document.getElementById("schedule").innerHTML = `
-        <h3>Amortization Schedule</h3>
-        <div class="table-wrapper">
-          <table>
-            <tr>
-              <th>Month</th>
-              <th>EMI</th>
-              <th>Interest</th>
-              <th>Principal</th>
-              <th>Extra Payment</th>
-              <th>Balance</th>
-            </tr>
-            ${tableRows}
-          </table>
-        </div>
-      `;
-    }
-
-    function toggleMode(e) {
-      if (e.checked) {
-        document.body.style.background = '#ffffff';
-      } else {
-        document.body.style.background = '#f9f9f9';
-      }
+          <td>${y}</td>
+          <td>₹${v.totalEMI.toFixed(2)}</td>
+          <td>₹${v.totalInterest.toFixed(2)}</td>
+          <td>₹${v.totalPrincipal.toFixed(2)}</td>
+          <td>₹${v.balance.toFixed(2)}</td>
+        </tr>`).join("");
+      document.getElementById("yearTable").innerHTML = `
+        <table>
+          <tr><th>Year</th><th>Total EMI</th><th>Total Interest</th><th>Total Principal</th><th>Balance</th></tr>
+          ${yearRows}
+        </table>`;
+      new Chart(document.getElementById('chartCanvas'), {
+        type: 'pie',
+        data: {
+          labels: ['Principal', 'Interest'],
+          datasets: [{
+            data: [P, totalInterest],
+            backgroundColor: ['#6A5ACD', '#FFA07A'],
+            borderWidth: 1
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
     }
   </script>
-</head>
-<body>
-  <header>
-    Smart Loan & EMI Planner
-    <div class="mode-toggle">
-      Light Background: <input type="checkbox" onchange="toggleMode(this)" checked>
-    </div>
-  </header>
-
-  <div class="container">
-    <label>Loan Amount (₹):</label>
-    <input type="number" id="loanAmount" placeholder="e.g. 3500000">
-
-    <label>Annual Interest Rate (%):</label>
-    <input type="number" id="interestRate" placeholder="e.g. 8">
-
-    <label>Loan Tenure (Years):</label>
-    <input type="number" id="loanTenure" placeholder="e.g. 20">
-
-    <label>Extra Payment Type:</label>
-    <select id="extraType">
-      <option value="emi">EMI Count</option>
-      <option value="lump">Lump Sum (₹)</option>
-    </select>
-
-    <div class="toggle-section">
-      <label id="extraLabel">EMI Count per Year:</label>
-      <input type="number" id="extraCount" placeholder="e.g. 1">
-    </div>
-
-    <label>Extra Amount (₹):</label>
-    <input type="number" id="extraAmount" placeholder="e.g. 100000">
-
-    <button onclick="calculateLoan()">Calculate</button>
-
-    <div id="results" class="results"></div>
-    <div id="schedule"></div>
-  </div>
 </body>
 </html>
